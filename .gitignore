@@ -49,3 +49,8 @@ embeddings/glove.6B.100d.txt
 *.npy
 *.h5
 __pycache__/
+
+embeddings/
+!embeddings/readme.md
+.idea
+.ipynb_checkpoints
