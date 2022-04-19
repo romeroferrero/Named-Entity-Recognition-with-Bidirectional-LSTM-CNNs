@@ -54,3 +54,5 @@ embeddings/
 !embeddings/readme.md
 .idea
 .ipynb_checkpoints
+
+*.csv

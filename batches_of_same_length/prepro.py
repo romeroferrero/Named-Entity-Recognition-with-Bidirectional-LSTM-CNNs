@@ -80,8 +80,8 @@ def create_batches(sentences):
 
 
 def create_matrices(sentences, word2idx, label2idx, case2idx, char2idx):
-    unknown_idx = word2idx["UNKNOWN_TOKEN"]
-    padding_idx = word2idx["PADDING_TOKEN"]
+    unknown_idx = word2idx["UNKNOWN_WORD"]
+    padding_idx = word2idx["PADDING_WORD"]
 
     dataset = []
 
@@ -117,25 +117,32 @@ def create_matrices(sentences, word2idx, label2idx, case2idx, char2idx):
     return dataset
 
 
-def iterate_minibatches(dataset, batch_len):
+def _prepare_batch(sentences):
+    all_words = []
+    all_caseings = []
+    all_characters = []
+    all_classes = []
+    for sentence in sentences:
+        words, words_casing, words_characters, words_classes = sentence
+        words_classes = np.expand_dims(words_classes, -1)
+        all_words.append(words)
+        all_caseings.append(words_casing)
+        all_characters.append(words_characters)
+        all_classes.append(words_classes)
+    return (
+        np.asarray(all_classes),
+        np.asarray(all_words),
+        np.asarray(all_caseings),
+        np.asarray(all_characters),
+    )
+
+
+def iterate_minibatches(all_sentences, batch_len):
     start = 0
     for i in batch_len:
-        tokens = []
-        caseing = []
-        char = []
-        labels = []
-        data = dataset[start:i]
+        sentences_of_same_length = all_sentences[start:i]
         start = i
-        for dt in data:
-            t, c, ch, l = dt
-            l = np.expand_dims(l, -1)
-            tokens.append(t)
-            caseing.append(c)
-            char.append(ch)
-            labels.append(l)
-        yield np.asarray(labels), np.asarray(tokens), np.asarray(caseing), np.asarray(
-            char
-        )
+        yield _prepare_batch(sentences_of_same_length)
 
 
 def add_char_information(sentences):
@@ -146,14 +153,47 @@ def add_char_information(sentences):
     return sentences
 
 
-def padding(sentences):
-    maxlen = 52
-    for sentence in sentences:
-        char = sentence[2]
-        for x in char:
-            maxlen = max(maxlen, len(x))
+def padding(sentences, max_sentence_len, max_word_len, word2idx, case2idx, char2idx, class2idx):
     for i, sentence in enumerate(sentences):
-        sentences[i][2] = pad_sequences(sentences[i][2], 52, padding="post")
+        # Words
+        sentences[i][0] = pad_sequences(
+            [sentence[0]],
+            max_sentence_len,
+            dtype="int32",
+            value=word2idx["PADDING_WORD"],
+            padding="post",
+        )[0]
+        # Casing
+        sentences[i][1] = pad_sequences(
+            [sentence[1]],
+            max_sentence_len,
+            dtype="int32",
+            value=case2idx["PADDING_WORD"],
+            padding="post",
+        )[0]
+        # Words chars
+        sentences[i][2] = pad_sequences(
+            sentence[2],
+            max_word_len,
+            dtype="int32",
+            value=char2idx["PADDING_CHAR"],
+            padding="post",
+        )
+        missing_words = (max_sentence_len - len(sentence[2]))
+        if missing_words != 0:
+            padded_word = [char2idx["PADDING_CHAR"]] * max_word_len
+            missing_padded_words = np.asarray([padded_word] * missing_words)
+            sentences[i][2] = np.concatenate(
+                [sentences[i][2], missing_padded_words], axis=0
+            )
+        # Classes
+        sentences[i][3] = pad_sequences(
+            [sentence[3]],
+            max_sentence_len,
+            dtype="int32",
+            value=class2idx["PADDING_CLASS"],
+            padding="post",
+        )[0]
     return sentences
 
 
