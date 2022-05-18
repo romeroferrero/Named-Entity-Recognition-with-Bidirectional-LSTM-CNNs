@@ -1,8 +1,9 @@
+import os
 import random
 
 import numpy as np
-from keras.preprocessing.sequence import pad_sequences
-from keras.utils import Progbar
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.utils import Progbar
 
 
 def readfile(filename):
@@ -18,6 +19,7 @@ def readfile(filename):
     ['lamb', 'O'],
     ['.', 'O'] ]
     """
+    assert os.path.isfile(filename)
     f = open(filename)
     sentences = []
     sentence = []
@@ -29,7 +31,6 @@ def readfile(filename):
             continue
         splits = line.split(" ")
         sentence.append([splits[0], splits[-1]])
-
     if len(sentence) > 0:
         sentences.append(sentence)
         sentence = []
